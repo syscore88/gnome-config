@@ -5,6 +5,7 @@
 
 set -Eeuo pipefail
 export DEBIAN_FRONTEND=noninteractive
+export PATH="/usr/sbin:/sbin:$PATH"
 
 detect_system_lang() {
     local sys_lang="${LANG:-}"
@@ -37,7 +38,12 @@ cleanup_on_exit() {
             echo -e "${ERR}✘ An error occurred (code: $exit_code).${NC}" >&3
         fi
     fi
-    sudo rm -f /etc/sudoers.d/99-temp-installer 2>/dev/null || true
+    if [[ "${USE_RUN0:-0}" -eq 1 ]]; then
+        sudo rm -f "${RUN0_NOPASSWD_FILE:-/etc/polkit-1/rules.d/51-run0-nopasswd.rules}" 2>/dev/null || true
+        sudo systemctl try-restart polkit 2>/dev/null || true
+    else
+        sudo rm -f /etc/sudoers.d/99-temp-installer 2>/dev/null || true
+    fi
 }
 trap cleanup_on_exit EXIT
 
@@ -108,8 +114,20 @@ if [[ "$EUID" -eq 0 ]]; then
     exit 1
 fi
 
+RUN0_NOPASSWD_FILE="/etc/polkit-1/rules.d/51-run0-nopasswd.rules"
+USE_RUN0=0
+if ! command -v visudo >/dev/null 2>&1 || sudo --version 2>/dev/null | grep -qi "run0"; then
+    USE_RUN0=1
+fi
+
 sudo -v
-echo "$CURRENT_USER ALL=(ALL) NOPASSWD: ALL" | sudo tee /etc/sudoers.d/99-temp-installer > /dev/null
+
+if [[ "$USE_RUN0" -eq 1 ]]; then
+    printf 'polkit._run0_nopasswd.push("%s");\n' "$CURRENT_USER" | sudo tee "$RUN0_NOPASSWD_FILE" > /dev/null
+    sudo systemctl try-restart polkit 2>/dev/null || true
+else
+    echo "$CURRENT_USER ALL=(ALL) NOPASSWD: ALL" | sudo tee /etc/sudoers.d/99-temp-installer > /dev/null
+fi
 
 # ==========================================================
 # 1. WSTĘPNE SPRAWDZENIA I UPRAWNIENIA
@@ -284,7 +302,12 @@ fi
 # ==========================================================
 # 4. ZAKOŃCZENIE I SPRZĄTANIE
 # ==========================================================
-sudo rm -f /etc/sudoers.d/99-temp-installer
+if [[ "$USE_RUN0" -eq 1 ]]; then
+    sudo rm -f "$RUN0_NOPASSWD_FILE"
+    sudo systemctl try-restart polkit 2>/dev/null || true
+else
+    sudo rm -f /etc/sudoers.d/99-temp-installer
+fi
 
 show_progress 12 $TOTAL_STEPS "$MSG_PHASE_3"
 echo -e "\n" >&3
