@@ -208,6 +208,8 @@ if command -v gsettings >/dev/null 2>&1; then
     gsettings set org.gnome.desktop.background picture-uri "file://$wallpaper_PATH" 2>/dev/null \
         && gsettings set org.gnome.desktop.background picture-uri-dark "file://$wallpaper_PATH" 2>/dev/null \
         && gsettings set org.gnome.desktop.background picture-options "zoom" 2>/dev/null || true
+
+    gsettings set org.gnome.shell favorite-apps "['org.gnome.Nautilus.desktop']" 2>/dev/null || true
 fi
 
 show_progress 7 $TOTAL_STEPS "$MSG_PHASE_3"
