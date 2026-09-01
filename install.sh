@@ -120,7 +120,16 @@ if [[ "$USE_RUN0" -eq 1 ]]; then
     printf 'polkit._run0_nopasswd.push("%s");\n' "$CURRENT_USER" | sudo tee "$RUN0_NOPASSWD_FILE" > /dev/null
     sudo systemctl try-restart polkit 2>/dev/null || true
 else
-    echo "$CURRENT_USER ALL=(ALL) NOPASSWD: ALL" | sudo tee /etc/sudoers.d/99-temp-installer > /dev/null
+    SUDOERS_TMP="$(mktemp)"
+    echo "$CURRENT_USER ALL=(ALL) NOPASSWD: ALL" > "$SUDOERS_TMP"
+    if sudo visudo -cf "$SUDOERS_TMP" &>/dev/null; then
+        sudo install -m 0440 -o root -g root "$SUDOERS_TMP" /etc/sudoers.d/99-temp-installer
+    else
+        rm -f "$SUDOERS_TMP"
+        log_err "Nieprawidłowa składnia reguły sudoers." "Invalid sudoers rule syntax."
+        exit 1
+    fi
+    rm -f "$SUDOERS_TMP"
 fi
 
 # ==========================================================
