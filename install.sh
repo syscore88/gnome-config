@@ -24,20 +24,25 @@ WARN='\033[0;33m'
 ERR='\033[0;31m'
 NC='\033[0m'
 
+TMP_LOG="$(mktemp /tmp/install-log.XXXXXX)"
+LOG_FILE="$HOME/install_error_$(date +%Y%m%d_%H%M%S).log"
+
 exec 3>&1
-exec >/dev/null 2>&1
+exec >>"$TMP_LOG" 2>&1
 
 cleanup_on_exit() {
     local exit_code=$?
     printf '\033[?7h' >&3
     if [ "$exit_code" -ne 0 ]; then
         echo -e "\n" >&3
+        cp -f "$TMP_LOG" "$LOG_FILE" 2>/dev/null || true
         if [[ "$SCRIPT_LANG" == "pl" ]]; then
-            echo -e "${ERR}✘ Wystąpił błąd (kod: $exit_code).${NC}" >&3
+            echo -e "${ERR}✘ Wystąpił błąd (kod: $exit_code). Szczegółowy log zapisano w: $LOG_FILE${NC}" >&3
         else
-            echo -e "${ERR}✘ An error occurred (code: $exit_code).${NC}" >&3
+            echo -e "${ERR}✘ An error occurred (code: $exit_code). Detailed log saved to: $LOG_FILE${NC}" >&3
         fi
     fi
+    rm -f "$TMP_LOG"
 }
 trap cleanup_on_exit EXIT
 
