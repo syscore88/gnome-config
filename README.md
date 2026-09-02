@@ -1,6 +1,6 @@
 # 🎨 GNOME Visual Configuration Script
 
-An automated Bash shell script designed for complete visual and environment configuration of **GNOME** desktop across popular Linux distributions. The script automatically detects the system package manager, installs required utility tools (GNOME Tweaks, GNOME Extensions), copies user configurations (`.config`, `.local/share`), sets wallpapers (desktop + GDM login screen), loads `dconf` settings, and installs GNOME extensions.
+An automated Bash shell script designed for complete visual and environment configuration of **GNOME** desktop across popular Linux distributions. The script automatically detects the system package manager, installs required utility tools (GNOME Tweaks, GNOME Extensions), copies user configurations, sets wallpapers (desktop + GDM login screen), loads `dconf` settings, and installs GNOME extensions.
 
 ---
 
