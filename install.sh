@@ -253,12 +253,8 @@ toolkit-accessibility=false
 button-layout='appmenu:minimize,maximize,close'
 
 [org/gnome/shell]
-disabled-extensions=['advanced-weather@sanjai.com', 'ubuntu-dock@ubuntu.com', 'ubuntu-appindicators@ubuntu.com']
-enabled-extensions=['ding@rastersoft.com', 'tiling-assistant@ubuntu.com', 'netspeed@alynx.one', 'SpeedBuzz@hridoybuzz.dev', 'speedinator@liam.moe', 'netspeedindicator@subashghimire.info.np', 'compiz-alike-magic-lamp-effect@hermes83.github.com', 'dash-to-dock@micxgx.gmail.com', 'blur-my-shell@aunetx', 'blur-wall@digitalspace.name', 'weatherpanel@attentivecoder', 'weather-prime@weather-prime', 'weatherornot@somepaulo.github.io', 'clipboard-indicator@Dieg0Js.github.io', 'compiz-windows-effect@hermes83.github.com', 'clipboard-history@Diyar1877', 'clipboard-history@alexsaveau.dev']
-
-[org/gnome/shell/extensions/advanced-weather]
-show-location-label=false
-weather-provider='openmeteo'
+disabled-extensions=['ubuntu-dock@ubuntu.com', 'ubuntu-appindicators@ubuntu.com']
+enabled-extensions=['ding@rastersoft.com', 'tiling-assistant@ubuntu.com', 'compiz-alike-magic-lamp-effect@hermes83.github.com', 'blur-my-shell@aunetx', 'weatherpanel@attentivecoder', 'compiz-windows-effect@hermes83.github.com', 'clipboard-history@alexsaveau.dev', 'system-monitor-panel@naimur']
 
 [org/gnome/shell/extensions/appindicator]
 icon-brightness=0.0
@@ -356,14 +352,22 @@ transparency-mode='FIXED'
 check-x11wayland=true
 show-home=false
 
-[org/gnome/shell/extensions/moe/liam/speedinator]
-app-grid-grace-period=150
-speed=0.5
+[org/gnome/shell/extensions/system-monitor-panel]
+network-unit='bytes'
+refresh-interval=15
+show-cpu=false
+show-disk=false
+show-external-disks=true
+show-gpu=false
+show-gpu-card=true
+show-icons=false
+show-memory=false
+show-network=true
+show-temperature=false
 
-[org/gnome/shell/extensions/speedbuzz]
-position='left'
-show-colors=true
-use-bytes=true
+[org/gnome/shell/extensions/system-monitor]
+memory-calculation-method='all'
+position='right'
 
 [org/gnome/shell/extensions/tiling-assistant]
 focus-hint-color='rgb(203,67,20)'
@@ -376,7 +380,7 @@ position='right'
 
 [org/gnome/shell/extensions/weatherpanel]
 actual-city=0
-city='[{"label":"Radomsko","region":"województwo mazowieckie","postcode":"97-500","country":"Polska","lat":51.06713,"lon":19.44477}]'
+city='[{"label":"Warszawa","region":"województwo mazowieckie","postcode":"97-500","country":"Polska","lat":51.06713,"lon":19.44477}]'
 position-in-panel='left'
 
 [org/gnome/shell/world-clocks]
@@ -421,13 +425,14 @@ if command -v pipx &>/dev/null; then
 
     if [[ -x "$GEXT_CMD" ]] || command -v gext &>/dev/null; then
         for ext in \
-            blur-my-shell@aunetx \
-            clipboard-history@alexsaveau.dev \
+            ding@rastersoft.com \
+            tiling-assistant@ubuntu.com \
             compiz-alike-magic-lamp-effect@hermes83.github.com \
             compiz-windows-effect@hermes83.github.com \
-            dash-to-dock@micxgx.gmail.com \
-            netspeedindicator@subashghimire.info.np \
-            weatherpanel@attentivecoder; do
+            blur-my-shell@aunetx \
+            weatherpanel@attentivecoder \
+            clipboard-history@alexsaveau.dev \
+            system-monitor-panel@naimur; do
             "$GEXT_CMD" install "$ext" || true
         done
     fi
