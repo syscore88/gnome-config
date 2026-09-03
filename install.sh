@@ -165,19 +165,19 @@ detect_os() {
 install_gnome_packages() {
     if [[ "$OS" == *"ubuntu"* || "$OS" == *"debian"* || "$OS_LIKE" == *"ubuntu"* || "$OS_LIKE" == *"debian"* || "$OS" == *"pop"* || "$OS" == *"linuxmint"* ]]; then
         sudo apt-get update -yq || true
-        for pkg in gnome-tweaks gnome-shell-extension-prefs gnome-shell-extensions; do
+        for pkg in gnome-tweaks gnome-shell-extension-prefs gnome-shell-extensions dconf-cli; do
             sudo apt-get install -yq "$pkg" || true
         done
     elif [[ "$OS" == "fedora" || "$OS_LIKE" == *"fedora"* ]]; then
-        for pkg in gnome-tweaks gnome-extensions-app; do
+        for pkg in gnome-tweaks gnome-extensions-app dconf; do
             sudo dnf install -yq "$pkg" || true
         done
     elif [[ "$OS" == "arch" || "$OS_LIKE" == *"arch"* || "$OS" == "manjaro" ]]; then
-        for pkg in gnome-tweaks gnome-shell-extensions; do
+        for pkg in gnome-tweaks gnome-shell-extensions dconf; do
             sudo pacman -S --noconfirm --needed "$pkg" || true
         done
     elif [[ "$OS" == *"opensuse"* || "$OS" == *"suse"* || "$OS_LIKE" == *"suse"* ]]; then
-        for pkg in gnome-tweaks gnome-shell-extensions; do
+        for pkg in gnome-tweaks gnome-shell-extensions dconf; do
             sudo zypper install -yqn "$pkg" || true
         done
     fi
