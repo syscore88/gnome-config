@@ -73,7 +73,7 @@ The temporary sudo/polkit rule is removed and the system automatically **reboots
 
 ### 1. Clone the repository or download the files
 ```bash
-git clone https://gitlab.com/syscore88/gnome-config.git
+git clone https://github.com/syscore88/gnome-config.git
 ```
 
 ### 2. Enter the downloaded folder
