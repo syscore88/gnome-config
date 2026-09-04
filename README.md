@@ -69,24 +69,24 @@ The temporary sudo/polkit rule is removed and the system automatically **reboots
 
 ---
 
-## 🛠️ How to Use
+ 🛠️ How to Use
 
-### 1. Clone the repository or download the files
+1. Clone the repository or download the files
 ```bash
 git clone https://github.com/syscore88/gnome-config.git
 ```
 
-### 2. Enter the downloaded folder
+2. Enter the downloaded folder
 ```bash
 cd gnome-config
 ```
 
-### 3. Make the script executable
+3. Make the script executable
 ```bash
 chmod +x install.sh
 ```
 
-### 4. Run the script
+4. Run the script
 > ⚠️ **IMPORTANT:** Run the script as a **regular user** (NOT as root/sudo). The script will ask for the administrator password at the start to configure temporary elevated privileges.
 
 ```bash
