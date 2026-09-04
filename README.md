@@ -91,6 +91,7 @@ chmod +x install.sh
 ```bash
 ./install.sh
 ```
+---
 
 <img width="1280" height="800" alt="Screenshot_fedora44_2026-08-31_20:36:07" src="https://github.com/user-attachments/assets/e8e30dce-db0c-4ddb-9845-ba80cd62b47b" />
 
@@ -101,6 +102,8 @@ If you find this tool helpful and it saved you some time, consider buying me a c
 [![Buy Me A Coffee](https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png)](https://buymeacoffee.com/bartekszczecinski)
 
 If you find this project useful, leave a star! ⭐
+
+---
 
 ## ⚠️ Troubleshooting & Notes
 
