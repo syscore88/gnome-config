@@ -1,69 +1,79 @@
 # 🎨 GNOME Visual Configuration Script
 
-An automated Bash shell script designed for complete visual and environment configuration of **GNOME** desktop across popular Linux distributions. The script automatically detects the system package manager, installs required utility tools (GNOME Tweaks, GNOME Extensions), copies user configurations, sets wallpapers (desktop + GDM login screen), loads `dconf` settings, and installs GNOME extensions.
+An automated Bash shell script designed for complete visual and environment configuration of the **GNOME** desktop across popular Linux distributions. The script automatically detects the system package manager, installs required GNOME utility packages, copies user configurations, sets the desktop wallpaper, loads `dconf` settings, installs GNOME Shell extensions, sets the user avatar, and configures the GDM login screen wallpaper.
+
+The script auto-detects the system language (Polish/English) from the `LANG`/`LC_ALL` locale and prints all status messages accordingly.
 
 ---
 
 ## 🚀 Script Features
 
-- **Automatic Linux Distribution Detection**: Full support for Debian, Ubuntu, Fedora, Arch Linux, openSUSE, and their derivatives.
-- **GNOME Tools Installation**: Automatically installs `gnome-tweaks` and extension management tools depending on the distribution.
+- **Automatic Linux Distribution Detection**: Support for Debian/Ubuntu/Pop!_OS/Linux Mint, Fedora, Arch/Manjaro, and openSUSE/SUSE systems, detected via `/etc/os-release`.
+- **Temporary Passwordless Sudo**: Requests the admin password once at the start, then configures a temporary `NOPASSWD` rule (via `/etc/sudoers.d/`, or a `polkit`/`run0` rule on systems without `visudo`) so the rest of the script can run unattended. The rule is automatically removed at the end of the script.
+- **GNOME Tools Installation**: Installs `gnome-tweaks`, an extension manager (`gnome-shell-extension-prefs`/`gnome-extensions-app` depending on distro), and `dconf`/`dconf-cli`.
 - **Configuration Files Sync**:
-  - Copies `.config/` folder contents to `~/.config/`
-  - Copies `.local/` folder contents and dedicated `.local/share/` to `~/.local/share/`
+  - Copies `.config/`, `.local/`, and `.icons/` folder contents into the corresponding folders in the user's home directory.
 - **Wallpaper Management**:
-  - Desktop wallpaper (light and dark modes) applied from `wallpaper.jpg`.
-  - GDM Login screen wallpaper applied from `login-wallpaper.png` (via GDM dconf database update).
-- **Import dconf Settings**: Automatically loads exported user preferences from `dconf-settings.ini` directly in the current user context (without `sudo`).
-- **GNOME Extensions Management**: Downloads and activates selected extensions via `gnome-extensions-cli` (`gext`):
-  - *Blur my Shell* (`blur-my-shell@aunetx`)
-  - *Clipboard History* (`clipboard-history@alexsaveau.dev`)
+  - Desktop wallpaper copied from `wallpaper.jpg` into the user's Pictures folder (`xdg-user-dir PICTURES`) and applied (light + dark) via `gsettings`.
+  - GDM login screen wallpaper applied from `login-wallpaper.png` by writing a dedicated `gdm` `dconf` profile/database (`/etc/dconf/db/gdm.d/01-login-wallpaper`) and running `dconf update`.
+- **Import dconf Settings**: Loads a full set of GNOME Shell, extension, terminal, and GTK4 file-chooser preferences directly into the user's `dconf` database via `dconf load /`.
+- **GNOME Shell Extensions**: Installs `gnome-extensions-cli` (`gext`) via `pipx`, then downloads and enables:
+  - *Desktop Icons NG* (`ding@rastersoft.com`)
+  - *Tiling Assistant* (`tiling-assistant@ubuntu.com`)
   - *Compiz-alike Magic Lamp Effect* (`compiz-alike-magic-lamp-effect@hermes83.github.com`)
   - *Compiz Windows Effect* (`compiz-windows-effect@hermes83.github.com`)
-  - *Dash to Dock* (`dash-to-dock@micxgx.gmail.com`)
-  - *NetSpeed Indicator* (`netspeedindicator@subashghimire.info.np`)
+  - *Blur my Shell* (`blur-my-shell@aunetx`)
   - *Weather Panel* (`weatherpanel@attentivecoder`)
-- **User Avatar Setup**: Automatically sets user profile picture in AccountsService using `piwo.png`.
+  - *Clipboard History* (`clipboard-history@alexsaveau.dev`)
+  - *System Monitor Panel* (`system-monitor-panel@naimur`)
+- **User Avatar Setup**: Automatically sets the user profile picture in `AccountsService` using `piwo.png`.
+- **Progress Bar & Logging**: Displays a live progress bar across 3 phases / 12 steps. On failure, a detailed log is saved to `~/install_error_<timestamp>.log`.
 
 ---
 
 ## 🐧 Supported Distributions
 
-The script identifies the OS using `/etc/os-release` and selects the corresponding package manager:
+The script identifies the OS using `/etc/os-release` (`ID` / `ID_LIKE`) and selects the corresponding package manager:
 
 | Distribution | Package Manager | Installed Packages |
 | :--- | :--- | :--- |
-| **Debian / Ubuntu / Pop!_OS / Mint** | `apt` | `gnome-tweaks`, `gnome-shell-extension-prefs`, `gnome-shell-extensions` |
-| **Fedora** | `dnf` | `gnome-tweaks`, `gnome-extensions-app` |
-| **Arch Linux / Manjaro** | `pacman` | `gnome-tweaks`, `gnome-shell-extensions` |
-| **openSUSE** | `zypper` | `gnome-tweaks`, `gnome-shell-extensions` |
+| **Debian / Ubuntu / Pop!_OS / Mint** | `apt` | `gnome-tweaks`, `gnome-shell-extension-prefs`, `gnome-shell-extensions`, `dconf-cli` |
+| **Fedora** | `dnf` | `gnome-tweaks`, `gnome-extensions-app`, `dconf` |
+| **Arch Linux / Manjaro** | `pacman` | `gnome-tweaks`, `gnome-shell-extensions`, `dconf` |
+| **openSUSE / SUSE** | `zypper` | `gnome-tweaks`, `gnome-shell-extensions`, `dconf` |
 
 ---
 
 ## 🔍 Module Details
 
-### 1. Configuration Copy
-Copies contents of `.local/share` into the user's home directory (`~/.local/share`), preserving directory structures and permissions.
+### 1. Permissions & Distribution Detection
+Verifies the script is **not** run as root, requests the sudo password once, and grants a temporary `NOPASSWD` rule for the duration of the run (via sudoers, or a `polkit`/`run0` rule on systems that lack `visudo`).
 
-### 2. Desktop & Login Wallpapers
-- Desktop wallpaper is copied to `/home/$USER/Dokumenty/wallpaper.jpg` and applied via `gsettings`.
-- GDM login background is copied to `/usr/share/backgrounds/custom/login-wallpaper.png`. The GDM dconf profile (`/etc/dconf/db/gdm.d/01-login-background`) is updated and recompiled with `sudo dconf update`.
+### 2. Configuration Copy & Wallpaper
+Copies `.config`, `.local`, and `.icons` from the script directory into the user's home directory, copies `wallpaper.jpg` into the Pictures folder, and applies it as the light/dark desktop background via `gsettings` (also pins Nautilus as the only favorite app in the GNOME Shell dash).
 
 ### 3. Loading dconf Settings
-The `dconf-settings.ini` file is sanitized for Windows CRLF line endings and loaded via:
+A predefined block of GNOME Shell extension settings (Blur my Shell, Dash to Dock, Tiling Assistant, Weather Panel, System Monitor, etc.), terminal profile colors, and GTK4 file-chooser preferences is loaded with `dconf load /` under the current user's permissions.
 
-dconf load / < dconf-settings.ini
+### 4. GNOME Shell Extensions
+Installs `gnome-extensions-cli` via `pipx`, then uses it (`gext install <uuid>`) to download and enable each extension listed above.
 
-This runs strictly under user permissions (without `sudo`), ensuring settings apply correctly to the user's dconf database.
+### 5. User Avatar (AccountsService)
+`piwo.png` is copied to `/var/lib/AccountsService/icons/$USER`, and `/var/lib/AccountsService/users/$USER` is created or updated with the matching `Icon=` entry.
 
-### 4. User Avatar (AccountsService)
-The image `piwo.png` is copied to `/var/lib/AccountsService/icons/$USER`, and `/var/lib/AccountsService/users/$USER` is updated with `Icon=...`.
+### 6. GDM Login Screen Wallpaper
+`login-wallpaper.png` is copied to `/usr/share/backgrounds/custom/`. A `gdm` `dconf` profile is created (if missing) pointing at `/usr/share/gdm/greeter-dconf-defaults`, and a database file under `/etc/dconf/db/gdm.d/` sets the GDM background picture (light + dark), before `sudo dconf update` recompiles the database.
+
+### 7. Finalization
+The temporary sudo/polkit rule is removed and the system automatically **reboots** (`systemctl reboot`) to apply all changes.
+
+---
 
 ## 🛠️ How to Use
 
 ### 1. Clone the repository or download the files
 ```bash
-git clone https://github.com/syscore88/gnome-config.git
+git clone https://gitlab.com/syscore88/gnome-config.git
 ```
 
 ### 2. Enter the downloaded folder
