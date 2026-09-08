@@ -254,7 +254,7 @@ button-layout='appmenu:minimize,maximize,close'
 
 [org/gnome/shell]
 disabled-extensions=['ubuntu-dock@ubuntu.com', 'ubuntu-appindicators@ubuntu.com']
-enabled-extensions=['ding@rastersoft.com', 'tiling-assistant@ubuntu.com', 'compiz-alike-magic-lamp-effect@hermes83.github.com', 'blur-my-shell@aunetx', 'weatherpanel@attentivecoder', 'compiz-windows-effect@hermes83.github.com', 'clipboard-history@alexsaveau.dev', 'system-monitor-panel@naimur']
+enabled-extensions=['ding@rastersoft.com', 'tiling-assistant@ubuntu.com', 'compiz-alike-magic-lamp-effect@hermes83.github.com', 'blur-my-shell@aunetx', 'weatherpanel@attentivecoder', 'compiz-windows-effect@hermes83.github.com', 'clipboard-history@alexsaveau.dev', 'system-monitor-panel@naimur', 'dash-to-dock@micxgx.gmail.com']
 
 [org/gnome/shell/extensions/appindicator]
 icon-brightness=0.0
