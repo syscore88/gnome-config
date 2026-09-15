@@ -92,8 +92,8 @@ chmod +x install.sh
 ./install.sh
 ```
 ---
+<img width="1280" height="800" alt="Screenshot_archlinux_2026-09-15_23:33:29" src="https://github.com/user-attachments/assets/546071da-0463-40a7-98f6-2b97edba5bca" />
 
-<img width="1280" height="800" alt="Screenshot_fedora44_2026-08-31_20:36:07" src="https://github.com/user-attachments/assets/e8e30dce-db0c-4ddb-9845-ba80cd62b47b" />
 
 ### ☕ Support the Project
 
