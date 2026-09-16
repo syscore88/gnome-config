@@ -217,7 +217,7 @@ if command -v gsettings >/dev/null 2>&1; then
     gsettings set org.gnome.shell favorite-apps "['org.gnome.Nautilus.desktop']" 2>/dev/null || true
 fi
 
-show_progress 7 $TOTAL_STEPS "$MSG_PHASE_3"
+show_progress 6 $TOTAL_STEPS "$MSG_PHASE_3"
 
 if command -v dconf &>/dev/null; then
     mkdir -p "$HOME/.config/dconf"
@@ -414,7 +414,7 @@ sort-directories-first=true
 DCONF_EOF
 fi
 
-show_progress 8 $TOTAL_STEPS "$MSG_PHASE_3"
+show_progress 7 $TOTAL_STEPS "$MSG_PHASE_3"
 
 if command -v pipx &>/dev/null; then
     pipx install gnome-extensions-cli --force || true
@@ -433,13 +433,14 @@ if command -v pipx &>/dev/null; then
             blur-my-shell@aunetx \
             weatherpanel@attentivecoder \
             clipboard-history@alexsaveau.dev \
-            system-monitor-panel@naimur; do
+            system-monitor-panel@naimur \
+            dash-to-dock@micxgx.gmail.com; do
             "$GEXT_CMD" install "$ext" || true
         done
     fi
 fi
 
-show_progress 9 $TOTAL_STEPS "$MSG_PHASE_3"
+show_progress 8 $TOTAL_STEPS "$MSG_PHASE_3"
 
 if [[ -f "$SCRIPT_DIR/piwo.png" ]]; then
     AVATAR_DEST="/var/lib/AccountsService/icons/$CURRENT_USER"
@@ -461,14 +462,14 @@ if [[ -f "$SCRIPT_DIR/piwo.png" ]]; then
     fi
 fi
 
-show_progress 10 $TOTAL_STEPS "$MSG_PHASE_3"
+show_progress 9 $TOTAL_STEPS "$MSG_PHASE_3"
 
 # ==========================================================
 # 3b. TAPETA EKRANU LOGOWANIA (GDM)
 # ==========================================================
-if [[ -f "$SCRIPT_DIR/login-wallpaper.png" ]]; then
-    show_progress 11 $TOTAL_STEPS "$MSG_LOGIN_WALLPAPER"
+show_progress 10 $TOTAL_STEPS "$MSG_LOGIN_WALLPAPER"
 
+if [[ -f "$SCRIPT_DIR/login-wallpaper.png" ]]; then
     LOGIN_BG_DIR="/usr/share/backgrounds/custom"
     LOGIN_BG_DEST="$LOGIN_BG_DIR/login-wallpaper.png"
 
@@ -505,7 +506,7 @@ else
     sudo rm -f /etc/sudoers.d/99-temp-installer
 fi
 
-show_progress 12 $TOTAL_STEPS "$MSG_PHASE_3"
+show_progress 11 $TOTAL_STEPS "$MSG_PHASE_3"
 echo -e "\n" >&3
 
 if [[ "$SCRIPT_LANG" == "pl" ]]; then
