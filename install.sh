@@ -105,15 +105,15 @@ show_progress() {
 }
 
 if [[ "$SCRIPT_LANG" == "pl" ]]; then
-    MSG_PHASE_1="[1/3] Wykrywanie dystrybucji i konfiguracja uprawnień..."
-    MSG_PHASE_2="[2/3] Instalacja i weryfikacja pakietów GNOME..."
-    MSG_PHASE_3="[3/3] Konfiguracja środowiska, tapety i ustawień wizualnych..."
-    MSG_LOGIN_WALLPAPER="Konfiguracja tapety ekranu logowania (GDM) przez dconf..."
+    MSG_PREP="Przygotowywanie..."
+    MSG_INSTALL="Instalacja..."
+    MSG_OPTIMIZE="Optymalizacja..."
+    MSG_FINALIZE="Finalizowanie..."
 else
-    MSG_PHASE_1="[1/3] Detecting distribution and configuring permissions..."
-    MSG_PHASE_2="[2/3] Installing and verifying GNOME packages..."
-    MSG_PHASE_3="[3/3] Configuring environment, wallpaper, and visual settings..."
-    MSG_LOGIN_WALLPAPER="Configuring GDM login screen wallpaper via dconf..."
+    MSG_PREP="Preparing..."
+    MSG_INSTALL="Installation..."
+    MSG_OPTIMIZE="Optimization..."
+    MSG_FINALIZE="Finalizing..."
 fi
 
 TOTAL_STEPS=12
@@ -164,13 +164,13 @@ fi
 # ==========================================================
 # 1. WSTĘPNE SPRAWDZENIA I UPRAWNIENIA
 # ==========================================================
-show_progress 0 $TOTAL_STEPS "$MSG_PHASE_1"
+show_progress 0 $TOTAL_STEPS "$MSG_PREP"
 
 printf '\033[?7h' >&3
 
 printf '\033[?7l' >&3
 
-show_progress 1 $TOTAL_STEPS "$MSG_PHASE_1"
+show_progress 1 $TOTAL_STEPS "$MSG_PREP"
 
 # ==========================================================
 # 2. WYKRYWANIE DYSTRYBUCJI I INSTALACJA PAKIETÓW
@@ -216,15 +216,15 @@ install_gnome_packages() {
 }
 
 detect_os
-show_progress 2 $TOTAL_STEPS "$MSG_PHASE_2"
+show_progress 2 $TOTAL_STEPS "$MSG_INSTALL"
 
 install_gnome_packages
-show_progress 3 $TOTAL_STEPS "$MSG_PHASE_2"
+show_progress 3 $TOTAL_STEPS "$MSG_INSTALL"
 
 # ==========================================================
 # 3. KONFIGURACJA WIZUALNA GNOME
 # ==========================================================
-show_progress 4 $TOTAL_STEPS "$MSG_PHASE_3"
+show_progress 4 $TOTAL_STEPS "$MSG_OPTIMIZE"
 
 if [[ -d "$SCRIPT_DIR/.config" ]]; then cp -af "$SCRIPT_DIR/.config/." ~/.config/ || true; fi
 if [[ -d "$SCRIPT_DIR/.local" ]]; then cp -af "$SCRIPT_DIR/.local/." ~/.local/ || true; fi
@@ -239,7 +239,7 @@ if [[ -f "$SCRIPT_DIR/wallpaper.jpg" ]]; then
     cp -af "$SCRIPT_DIR/wallpaper.jpg" "$wallpaper_PATH" || true
 fi
 
-show_progress 5 $TOTAL_STEPS "$MSG_PHASE_3"
+show_progress 5 $TOTAL_STEPS "$MSG_OPTIMIZE"
 
 if command -v gsettings >/dev/null 2>&1; then
     gsettings set org.gnome.desktop.background picture-uri "file://$wallpaper_PATH" 2>/dev/null \
@@ -249,7 +249,7 @@ if command -v gsettings >/dev/null 2>&1; then
     gsettings set org.gnome.shell favorite-apps "['org.gnome.Nautilus.desktop']" 2>/dev/null || true
 fi
 
-show_progress 6 $TOTAL_STEPS "$MSG_PHASE_3"
+show_progress 6 $TOTAL_STEPS "$MSG_OPTIMIZE"
 
 if command -v dconf &>/dev/null; then
     mkdir -p "$HOME/.config/dconf"
@@ -446,7 +446,7 @@ sort-directories-first=true
 DCONF_EOF
 fi
 
-show_progress 7 $TOTAL_STEPS "$MSG_PHASE_3"
+show_progress 7 $TOTAL_STEPS "$MSG_OPTIMIZE"
 
 if command -v pipx &>/dev/null; then
     pipx install gnome-extensions-cli --force || true
@@ -476,7 +476,7 @@ if command -v pipx &>/dev/null; then
     fi
 fi
 
-show_progress 8 $TOTAL_STEPS "$MSG_PHASE_3"
+show_progress 8 $TOTAL_STEPS "$MSG_OPTIMIZE"
 
 if [[ -f "$SCRIPT_DIR/piwo.png" ]]; then
     AVATAR_DEST="/var/lib/AccountsService/icons/$CURRENT_USER"
@@ -498,12 +498,12 @@ if [[ -f "$SCRIPT_DIR/piwo.png" ]]; then
     fi
 fi
 
-show_progress 9 $TOTAL_STEPS "$MSG_PHASE_3"
+show_progress 9 $TOTAL_STEPS "$MSG_OPTIMIZE"
 
 # ==========================================================
 # 3b. TAPETA EKRANU LOGOWANIA (GDM)
 # ==========================================================
-show_progress 10 $TOTAL_STEPS "$MSG_LOGIN_WALLPAPER"
+show_progress 10 $TOTAL_STEPS "$MSG_OPTIMIZE"
 
 if [[ -f "$SCRIPT_DIR/login-wallpaper.png" ]]; then
     LOGIN_BG_DIR="/usr/share/backgrounds/custom"
@@ -542,7 +542,7 @@ else
     sudo rm -f /etc/sudoers.d/99-temp-installer
 fi
 
-show_progress 11 $TOTAL_STEPS "$MSG_PHASE_3"
+show_progress 11 $TOTAL_STEPS "$MSG_FINALIZE"
 echo -e "\n" >&3
 
 if [[ "$SCRIPT_LANG" == "pl" ]]; then
