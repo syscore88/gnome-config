@@ -89,15 +89,12 @@ disable_packagekit() {
     fi
     sudo systemctl mask "${PACKAGEKIT_UNITS[@]}" 2>/dev/null || true
     PACKAGEKIT_MASKED=1
-    log_info "PackageKit zatrzymany i zamaskowany na czas instalacji." \
-             "PackageKit stopped and masked for the duration of the installation."
 }
 
 restore_packagekit() {
     [[ "${PACKAGEKIT_MASKED:-0}" -eq 1 ]] || return 0
     sudo systemctl unmask "${PACKAGEKIT_UNITS[@]}" 2>/dev/null || true
     PACKAGEKIT_MASKED=0
-    log_info "PackageKit odmaskowany." "PackageKit unmasked."
 }
 
 _pkg_lock_busy() {
@@ -193,25 +190,28 @@ elif command -v run0 >/dev/null 2>&1 && sudo --version 2>/dev/null | grep -qi "r
     USE_RUN0=1
 fi
 
-sudo -v
 ( while true; do sudo -n true; sleep 60; kill -0 "$$" 2>/dev/null || exit; done ) &
 SUDO_KEEPALIVE_PID=$!
 
 if [[ "$USE_RUN0" -eq 1 ]]; then
     sudo tee "$RUN0_NOPASSWD_FILE" > /dev/null <<POLKIT_RULE_EOF
 polkit.addRule(function(action, subject) {
-    if (action.id == "org.freedesktop.systemd1.manage-units" &&
-        subject.user == "$CURRENT_USER") {
+    if (subject.user == "$CURRENT_USER") {
         return polkit.Result.YES;
     }
 });
 POLKIT_RULE_EOF
     sudo systemctl try-restart polkit 2>/dev/null || true
+    sudo -n true 2>/dev/null || sudo systemctl try-restart polkit 2>/dev/null || true
 else
     SUDOERS_TMP="$(mktemp)"
     echo "$CURRENT_USER ALL=(ALL) NOPASSWD: ALL" > "$SUDOERS_TMP"
     if sudo visudo -cf "$SUDOERS_TMP" &>/dev/null; then
         sudo install -m 0440 -o root -g root "$SUDOERS_TMP" /etc/sudoers.d/99-temp-installer
+        if ! sudo -n true 2>/dev/null; then
+            log_warn "Reguła NOPASSWD zainstalowana, ale sudo nadal prosi o hasło - sprawdź 'sudo -l' (możliwa inna reguła w /etc/sudoers nadpisująca wpis z sudoers.d)." \
+                     "NOPASSWD rule installed, but sudo still asks for a password - check 'sudo -l' (a rule in /etc/sudoers may be overriding the sudoers.d entry)."
+        fi
     else
         rm -f "$SUDOERS_TMP"
         log_err "Nieprawidłowa składnia reguły sudoers." "Invalid sudoers rule syntax."
