@@ -275,7 +275,7 @@ install_gnome_packages() {
             sudo pacman -S --noconfirm --needed "$pkg" || FAILED_PACKAGES+=("$pkg")
         done
     elif [[ "$OS" == *"opensuse"* || "$OS" == *"suse"* || "$OS_LIKE" == *"suse"* ]]; then
-        for pkg in gnome-tweaks gnome-shell-extensions dconf; do
+        for pkg in gnome-tweaks gnome-shell-extensions-common dconf; do
             sudo zypper -q -n install -y "$pkg" || FAILED_PACKAGES+=("$pkg")
         done
     else
