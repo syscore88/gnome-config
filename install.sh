@@ -276,7 +276,7 @@ install_gnome_packages() {
         done
     elif [[ "$OS" == *"opensuse"* || "$OS" == *"suse"* || "$OS_LIKE" == *"suse"* ]]; then
         for pkg in gnome-tweaks gnome-shell-extensions dconf; do
-            sudo zypper install -yqn "$pkg" || FAILED_PACKAGES+=("$pkg")
+            sudo zypper -q -n install -y "$pkg" || FAILED_PACKAGES+=("$pkg")
         done
     else
         log_warn "Nierozpoznana dystrybucja ($OS) - pomijam instalację pakietów GNOME. Zainstaluj ręcznie: gnome-tweaks, gnome-shell-extensions, dconf-cli/dconf." \
