@@ -252,7 +252,7 @@ detect_os() {
     if [[ -f /etc/os-release ]]; then
         . /etc/os-release
         OS="${ID:-}"
-        OS_LIKE="${ID_LIKE:-}"
+        OS_LIKE="${ID_LIKE:-${ID:-}}"
     else
         OS="unknown"
         OS_LIKE=""
@@ -261,20 +261,20 @@ detect_os() {
 
 install_gnome_packages() {
     wait_for_pkg_lock
-    if [[ "$OS" == *"ubuntu"* || "$OS" == *"debian"* || "$OS_LIKE" == *"ubuntu"* || "$OS_LIKE" == *"debian"* || "$OS" == *"pop"* || "$OS" == *"linuxmint"* ]]; then
+    if [[ "$OS_LIKE" == *"ubuntu"* || "$OS_LIKE" == *"debian"* ]]; then
         sudo apt-get update -yq || true
         for pkg in gnome-tweaks gnome-shell-extension-prefs gnome-shell-extensions dconf-cli; do
             sudo apt-get install -yq "$pkg" || FAILED_PACKAGES+=("$pkg")
         done
-    elif [[ "$OS" == "fedora" || "$OS_LIKE" == *"fedora"* ]]; then
+    elif [[ "$OS_LIKE" == *"fedora"* ]]; then
         for pkg in gnome-tweaks gnome-extensions-app dconf; do
             sudo dnf install -yq "$pkg" || FAILED_PACKAGES+=("$pkg")
         done
-    elif [[ "$OS" == "arch" || "$OS_LIKE" == *"arch"* || "$OS" == "manjaro" ]]; then
+    elif [[ "$OS_LIKE" == *"arch"* ]]; then
         for pkg in gnome-tweaks gnome-shell-extensions dconf; do
             sudo pacman -S --noconfirm --needed "$pkg" || FAILED_PACKAGES+=("$pkg")
         done
-    elif [[ "$OS" == *"opensuse"* || "$OS" == *"suse"* || "$OS_LIKE" == *"suse"* ]]; then
+    elif [[ "$OS_LIKE" == *"suse"* ]]; then
         for pkg in gnome-tweaks gnome-shell-extensions-common dconf; do
             sudo zypper -q -n install -y "$pkg" || FAILED_PACKAGES+=("$pkg")
         done
