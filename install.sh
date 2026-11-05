@@ -59,7 +59,7 @@ cleanup_on_exit() {
     local do_reboot=0
     [ "$exit_code" -eq 0 ] && [ "${DO_REBOOT:-0}" = "1" ] && do_reboot=1
     if [ "${SUDO_READY:-0}" = "1" ]; then
-        sudo sh -c 'rm -f "$1" "$2"; systemctl try-restart polkit 2>/dev/null; [ "$3" = 1 ] && systemctl reboot' _ \
+        sudo sh -c 'rm -f "$1" "$2"; systemctl try-restart polkit 2>/dev/null; [ "$3" = 1 ] && { systemctl reboot 2>/dev/null || reboot; }' _ \
             "${RUN0_NOPASSWD_FILE:-/etc/polkit-1/rules.d/51-run0-nopasswd.rules}" \
             "/etc/sudoers.d/99-temp-installer" \
             "$do_reboot"
@@ -111,7 +111,7 @@ _pkg_lock_busy() {
         [[ -e "$f" ]] || continue
         sudo fuser "$f" >/dev/null 2>&1 && return 0
     done
-    pgrep -x 'apt|apt-get|dpkg|zypper|pacman|dnf|dnf5|packagekitd' >/dev/null 2>&1 && return 0
+    pgrep -x 'apt|apt-get|dpkg|zypper|pacman|dnf|dnf5|xbps-install|packagekitd' >/dev/null 2>&1 && return 0
     return 1
 }
 
@@ -278,6 +278,11 @@ install_gnome_packages() {
     elif [[ "$OS_LIKE" == *"suse"* ]]; then
         for pkg in gnome-tweaks gnome-shell-extensions-common dconf; do
             sudo zypper -q -n install -y "$pkg" || FAILED_PACKAGES+=("$pkg")
+        done
+    elif [[ "$OS_LIKE" == *"void"* ]]; then
+        sudo xbps-install -Suy xbps || true
+        for pkg in dbus elogind NetworkManager gdm gnome gnome-tweaks gnome-shell-extensions dconf; do
+            sudo xbps-install -y "$pkg" || FAILED_PACKAGES+=("$pkg")
         done
     else
         log_warn "Nierozpoznana dystrybucja ($OS) - pomijam instalację pakietów GNOME. Zainstaluj ręcznie: gnome-tweaks, gnome-shell-extensions, dconf-cli/dconf." \
@@ -621,6 +626,19 @@ if [[ "$SCRIPT_LANG" == "pl" ]]; then
     echo -e "${SUCCESS}✔ KONFIGURACJA WIZUALNA ZAKOŃCZONA!${NC}" >&3
 else
     echo -e "${SUCCESS}✔ VISUAL CONFIGURATION COMPLETED!${NC}" >&3
+fi
+
+if [[ "$OS_LIKE" == *"void"* ]]; then
+    for svc in dhcpcd wpa_supplicant; do
+        if [[ -L "/var/service/$svc" ]]; then
+            sudo rm -f "/var/service/$svc" || true
+        fi
+    done
+    for svc in dbus elogind NetworkManager gdm; do
+        if [[ -d "/etc/sv/$svc" && ! -e "/var/service/$svc" ]]; then
+            sudo ln -s "/etc/sv/$svc" "/var/service/$svc" || true
+        fi
+    done
 fi
 
 DO_REBOOT=1
