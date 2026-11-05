@@ -35,12 +35,14 @@ The script auto-detects the system language (Polish/English) from the `LANG`/`LC
 
 The script identifies the OS using `/etc/os-release` (`ID` / `ID_LIKE`) and selects the corresponding package manager:
 
-| Distribution | Package Manager | Installed Packages |
-| :--- | :--- | :--- |
-| **Debian / Ubuntu / Pop!_OS / Mint** | `apt` | `gnome-tweaks`, `gnome-shell-extension-prefs`, `gnome-shell-extensions`, `dconf-cli` |
-| **Fedora** | `dnf` | `gnome-tweaks`, `gnome-extensions-app`, `dconf` |
-| **Arch Linux / Manjaro** | `pacman` | `gnome-tweaks`, `gnome-shell-extensions`, `dconf` |
-| **openSUSE / SUSE** | `zypper` | `gnome-tweaks`, `gnome-shell-extensions`, `dconf` |
+| Distribution | Package Manager |
+| :--- | :--- |
+| **Arch Linux / Manjaro / EndeavourOS** | `pacman` |
+| **Debian / Ubuntu** | `apt` |
+| **openSUSE / SUSE** | `zypper` |
+| **Fedora / RHEL** | `dnf` |
+| **Void** | `xbps` | 
+| **NixOs** | `nix` | 
 
 ---
 
