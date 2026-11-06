@@ -43,15 +43,15 @@ cleanup_on_exit() {
         cp -f "$TMP_LOG" "$LOG_FILE" 2>/dev/null || true
         if [ "$exit_code" -ne 0 ]; then
             if [[ "$SCRIPT_LANG" == "pl" ]]; then
-                echo -e "${ERR}✘ Wystąpił błąd (kod: $exit_code). Szczegółowy log zapisano w: $LOG_FILE${NC}" >&3
+                echo -e "${ERR}[X] Wystąpił błąd (kod: $exit_code). Szczegółowy log zapisano w: $LOG_FILE${NC}" >&3
             else
-                echo -e "${ERR}✘ An error occurred (code: $exit_code). Detailed log saved to: $LOG_FILE${NC}" >&3
+                echo -e "${ERR}[X] An error occurred (code: $exit_code). Detailed log saved to: $LOG_FILE${NC}" >&3
             fi
         else
             if [[ "$SCRIPT_LANG" == "pl" ]]; then
-                echo -e "${WARN}⚠ Niektóre pakiety nie zostały zainstalowane. Log zapisano w: $LOG_FILE${NC}" >&3
+                echo -e "${WARN}[!] Niektóre pakiety nie zostały zainstalowane. Log zapisano w: $LOG_FILE${NC}" >&3
             else
-                echo -e "${WARN}⚠ Some packages failed to install. Log saved to: $LOG_FILE${NC}" >&3
+                echo -e "${WARN}[!] Some packages failed to install. Log saved to: $LOG_FILE${NC}" >&3
             fi
         fi
     fi
@@ -71,11 +71,12 @@ _pick_msg() { [[ "$SCRIPT_LANG" == "pl" ]] && echo "$1" || echo "$2"; }
 _log_write() {
     echo -e "$1"
     echo -e "$1" >&3
+    cp -f "$TMP_LOG" "$LOG_FILE" 2>/dev/null || true
 }
 log_info()  { local m; m="$(_pick_msg "$1" "$2")"; _log_write "${INFO}==> $m${NC}"; }
-log_ok()    { local m; m="$(_pick_msg "$1" "$2")"; _log_write "${SUCCESS}✔ $m${NC}"; }
-log_err()   { local m; m="$(_pick_msg "$1" "$2")"; _log_write "${ERR}✘ ERROR: $m${NC}"; }
-log_warn()  { local m; m="$(_pick_msg "$1" "$2")"; _log_write "${WARN}⚠ WARN: $m${NC}"; }
+log_ok()    { local m; m="$(_pick_msg "$1" "$2")"; _log_write "${SUCCESS}[OK] $m${NC}"; }
+log_err()   { local m; m="$(_pick_msg "$1" "$2")"; _log_write "${ERR}[X] ERROR: $m${NC}"; }
+log_warn()  { local m; m="$(_pick_msg "$1" "$2")"; _log_write "${WARN}[!] WARN: $m${NC}"; }
 
 trap 'log_err "Błąd w linii $LINENO. Polecenie: $BASH_COMMAND" "Error at line $LINENO. Command: $BASH_COMMAND"' ERR
 
@@ -151,7 +152,7 @@ show_progress() {
     local avail=$(( cols - overhead ))
     if (( avail < 5 )); then avail=5; fi
     if (( ${#msg} > avail )); then
-        msg="${msg:0:$((avail - 1))}…"
+        msg="${msg:0:$((avail - 3))}..."
     fi
 
     local filled=$(( percent * bar_width / 100 ))
@@ -185,7 +186,7 @@ USER_PICTURES="$(xdg-user-dir PICTURES 2>/dev/null || echo "$HOME/Pictures")"
 wallpaper_PATH="$USER_PICTURES/wallpaper.jpg"
 
 if [[ "$EUID" -eq 0 ]]; then
-    echo -e "${ERR}✘ Nie uruchamiaj skryptu jako root. Uruchom jako zwykły użytkownik z sudo.${NC}" >&3
+    echo -e "${ERR}[X] Nie uruchamiaj skryptu jako root. Uruchom jako zwykły użytkownik z sudo.${NC}" >&3
     exit 1
 fi
 
@@ -628,9 +629,9 @@ show_progress 11 $TOTAL_STEPS "$MSG_FINALIZE"
 printf '\n\n' >&3
 
 if [[ "$SCRIPT_LANG" == "pl" ]]; then
-    echo -e "${SUCCESS}✔ KONFIGURACJA WIZUALNA ZAKOŃCZONA!${NC}" >&3
+    echo -e "${SUCCESS}[OK] KONFIGURACJA WIZUALNA ZAKOŃCZONA!${NC}" >&3
 else
-    echo -e "${SUCCESS}✔ VISUAL CONFIGURATION COMPLETED!${NC}" >&3
+    echo -e "${SUCCESS}[OK] VISUAL CONFIGURATION COMPLETED!${NC}" >&3
 fi
 
 if [[ "$OS_LIKE" == *"void"* ]]; then
