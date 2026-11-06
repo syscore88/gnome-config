@@ -324,12 +324,17 @@ fi
 
 show_progress 5 $TOTAL_STEPS "$MSG_OPTIMIZE"
 
-if command -v gsettings >/dev/null 2>&1; then
-    gsettings set org.gnome.desktop.background picture-uri "file://$wallpaper_PATH" 2>/dev/null \
-        && gsettings set org.gnome.desktop.background picture-uri-dark "file://$wallpaper_PATH" 2>/dev/null \
-        && gsettings set org.gnome.desktop.background picture-options "zoom" 2>/dev/null || true
+DBUS_WRAP=()
+if [[ "$OS_LIKE" == *"void"* && -z "${DBUS_SESSION_BUS_ADDRESS:-}" ]] && command -v dbus-run-session >/dev/null 2>&1; then
+    DBUS_WRAP=(dbus-run-session --)
+fi
 
-    gsettings set org.gnome.shell favorite-apps "['org.gnome.Nautilus.desktop']" 2>/dev/null || true
+if command -v gsettings >/dev/null 2>&1; then
+    ${DBUS_WRAP[@]+"${DBUS_WRAP[@]}"} gsettings set org.gnome.desktop.background picture-uri "file://$wallpaper_PATH" 2>/dev/null \
+        && ${DBUS_WRAP[@]+"${DBUS_WRAP[@]}"} gsettings set org.gnome.desktop.background picture-uri-dark "file://$wallpaper_PATH" 2>/dev/null \
+        && ${DBUS_WRAP[@]+"${DBUS_WRAP[@]}"} gsettings set org.gnome.desktop.background picture-options "zoom" 2>/dev/null || true
+
+    ${DBUS_WRAP[@]+"${DBUS_WRAP[@]}"} gsettings set org.gnome.shell favorite-apps "['org.gnome.Nautilus.desktop']" 2>/dev/null || true
 fi
 
 show_progress 6 $TOTAL_STEPS "$MSG_OPTIMIZE"
@@ -337,7 +342,7 @@ show_progress 6 $TOTAL_STEPS "$MSG_OPTIMIZE"
 if command -v dconf &>/dev/null; then
     mkdir -p "$HOME/.config/dconf"
 
-    dconf load / <<'DCONF_EOF' || true
+    ${DBUS_WRAP[@]+"${DBUS_WRAP[@]}"} dconf load / <<'DCONF_EOF' || true
 [org/gnome/Ptyxis/Profiles/979e3c3bcf05a3fa49ec466f6a5d0ca7]
 bold-is-bright=true
 palette='xterm'
