@@ -88,10 +88,20 @@ cd gnome-config
 chmod +x install.sh
 ```
 
+**3.1. For NixOS**
+```bash
+chmod +x nix.sh
+```
+
 **4. Run the script**
 > ⚠️ **IMPORTANT:** Run the script as a **regular user** (NOT as root/sudo). The script will ask for the administrator password at the start to configure temporary elevated privileges.
 ```bash
 ./install.sh
+```
+
+**4.1. For NixOS**
+```bash
+./nix.sh
 ```
 
 ---
