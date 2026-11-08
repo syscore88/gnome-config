@@ -41,8 +41,8 @@ The script identifies the OS using `/etc/os-release` (`ID` / `ID_LIKE`) and sele
 | **Debian / Ubuntu** | `apt` |
 | **openSUSE / SUSE** | `zypper` |
 | **Fedora / RHEL** | `dnf` |
-| **Void** | `xbps` | 
-| **NixOs** | `nix` | 
+| **Void** | `xbps` |
+| **NixOS** | `nix` |
 
 ---
 
@@ -71,37 +71,27 @@ The temporary sudo/polkit rule is removed and the system automatically **reboots
 
 ---
 
- 🛠️ How to Use
+## 🛠️ How to Use
 
-1. Clone the repository or download the files
+**1. Clone the repository or download the files**
 ```bash
 git clone https://github.com/syscore88/gnome-config.git
 ```
 
-2. Enter the downloaded folder
+**2. Enter the downloaded folder**
 ```bash
 cd gnome-config
 ```
 
-3. Make the script executable
+**3. Make the script executable**
 ```bash
 chmod +x install.sh
 ```
 
-  For nixos
-```bash
-chmod +x nix.sh
-```
-
-4. Run the script
+**4. Run the script**
 > ⚠️ **IMPORTANT:** Run the script as a **regular user** (NOT as root/sudo). The script will ask for the administrator password at the start to configure temporary elevated privileges.
 ```bash
 ./install.sh
-```
-
-  For nixos
-```bash
-./nix.sh
 ```
 
 ---
