@@ -288,11 +288,7 @@ install_gnome_packages() {
     else
         log_warn "Nierozpoznana dystrybucja ($OS) - pomijam instalację pakietów GNOME. Zainstaluj ręcznie: gnome-tweaks, gnome-shell-extensions, dconf-cli/dconf." \
                  "Unrecognized distribution ($OS) - skipping GNOME package installation. Install manually: gnome-tweaks, gnome-shell-extensions, dconf-cli/dconf."
-    fi
-
-    if [[ ${#FAILED_PACKAGES[@]} -gt 0 ]]; then
-        log_warn "Nie udało się zainstalować: ${FAILED_PACKAGES[*]}. Sprawdź log: $LOG_FILE" \
-                 "Failed to install: ${FAILED_PACKAGES[*]}. Check the log: $LOG_FILE"
+        FAILED_PACKAGES+=(gnome-tweaks gnome-shell-extensions dconf)
     fi
 }
 
@@ -538,7 +534,7 @@ fi
 show_progress 7 $TOTAL_STEPS "$MSG_OPTIMIZE"
 
 if command -v pipx &>/dev/null; then
-    pipx install gnome-extensions-cli --force || true
+    pipx install gnome-extensions-cli --force || FAILED_PACKAGES+=("gnome-extensions-cli")
 
     GEXT_CMD="$HOME/.local/bin/gext"
     if command -v gext &>/dev/null; then
@@ -558,11 +554,9 @@ if command -v pipx &>/dev/null; then
             dash-to-dock@micxgx.gmail.com; do
             "$GEXT_CMD" install "$ext" || FAILED_EXTENSIONS+=("$ext")
         done
-        if [[ ${#FAILED_EXTENSIONS[@]} -gt 0 ]]; then
-            log_warn "Nie udało się zainstalować niektórych rozszerzeń: ${FAILED_EXTENSIONS[*]}. Sprawdź log: $LOG_FILE" \
-                     "Failed to install some extensions: ${FAILED_EXTENSIONS[*]}. Check the log: $LOG_FILE"
-        fi
     fi
+else
+    FAILED_PACKAGES+=("pipx")
 fi
 
 show_progress 8 $TOTAL_STEPS "$MSG_OPTIMIZE"
@@ -627,6 +621,16 @@ fi
 
 show_progress 11 $TOTAL_STEPS "$MSG_FINALIZE"
 printf '\n\n' >&3
+
+if [[ ${#FAILED_PACKAGES[@]} -gt 0 ]]; then
+    log_warn "Nie udało się zainstalować: ${FAILED_PACKAGES[*]}. Sprawdź log: $LOG_FILE" \
+             "Failed to install: ${FAILED_PACKAGES[*]}. Check the log: $LOG_FILE"
+fi
+
+if [[ ${#FAILED_EXTENSIONS[@]} -gt 0 ]]; then
+    log_warn "Nie udało się zainstalować niektórych rozszerzeń: ${FAILED_EXTENSIONS[*]}. Sprawdź log: $LOG_FILE" \
+             "Failed to install some extensions: ${FAILED_EXTENSIONS[*]}. Check the log: $LOG_FILE"
+fi
 
 if [[ "$SCRIPT_LANG" == "pl" ]]; then
     echo -e "${SUCCESS}[OK] KONFIGURACJA WIZUALNA ZAKOŃCZONA!${NC}" >&3
