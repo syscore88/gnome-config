@@ -282,7 +282,7 @@ install_gnome_packages() {
         done
     elif [[ "$OS_LIKE" == *"void"* ]]; then
         sudo xbps-install -Suy xbps || true
-        for pkg in dbus elogind NetworkManager mesa-dri xorg-server-xwayland gdm gnome gnome-tweaks gnome-shell-extensions dconf; do
+        for pkg in dbus elogind NetworkManager pulseaudio-utils rtkit mesa-dri xorg-server-xwayland gdm gnome gnome-tweaks gnome-shell-extensions dconf; do
             sudo xbps-install -y "$pkg" || FAILED_PACKAGES+=("$pkg")
         done
     else
