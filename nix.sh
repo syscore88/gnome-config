@@ -39,6 +39,8 @@ safe_copy_dir() {
 
 cleanup_on_exit() {
     local exit_code=$?
+    set +e
+    trap - ERR
     [ -n "${SUDO_KEEPALIVE_PID:-}" ] && kill "$SUDO_KEEPALIVE_PID" 2>/dev/null || true
     printf '\033[?7h' >&3
     if [ "$exit_code" -ne 0 ]; then
@@ -54,10 +56,10 @@ cleanup_on_exit() {
     local do_reboot=0
     [ "$exit_code" -eq 0 ] && [ "${DO_REBOOT:-0}" = "1" ] && do_reboot=1
     if [ "${SUDO_READY:-0}" = "1" ]; then
-        sudo sh -c 'rm -f "$1" "$2"; systemctl try-restart polkit 2>/dev/null; [ "$3" = 1 ] && systemctl reboot' _ \
+        sudo sh -c 'rm -f "$1" "$2"; systemctl try-restart polkit 2>/dev/null || true; if [ "$3" = 1 ]; then systemctl reboot 2>/dev/null || reboot; fi' _ \
             "${RUN0_NOPASSWD_FILE:-/etc/polkit-1/rules.d/51-run0-nopasswd.rules}" \
             "/etc/sudoers.d/99-temp-installer" \
-            "$do_reboot"
+            "$do_reboot" || true
     fi
 }
 trap cleanup_on_exit EXIT
@@ -65,7 +67,7 @@ trap cleanup_on_exit EXIT
 _pick_msg() { [[ "$SCRIPT_LANG" == "pl" ]] && echo "$1" || echo "$2"; }
 _log_write() {
     echo -e "$1"
-    echo -e "$1" >&3
+    printf '\r\033[K%b\n' "$1" >&3
     cp -f "$TMP_LOG" "$LOG_FILE" 2>/dev/null || true
 }
 log_info()  { local m; m="$(_pick_msg "$1" "$2")"; _log_write "${INFO}==> $m${NC}"; }
@@ -123,7 +125,7 @@ else
     MSG_FINALIZE="Finalizing..."
 fi
 
-TOTAL_STEPS=7
+TOTAL_STEPS=6
 
 CURRENT_USER=$(whoami)
 USER_PICTURES_DIR="$(xdg-user-dir PICTURES 2>/dev/null || echo "$HOME/Pictures")"
@@ -144,15 +146,16 @@ fi
 # ==========================================
 RUN0_NOPASSWD_FILE="/etc/polkit-1/rules.d/51-run0-nopasswd.rules"
 USE_RUN0=0
-if ! command -v visudo >/dev/null 2>&1; then
-    USE_RUN0=1
-elif command -v run0 >/dev/null 2>&1 && sudo --version 2>/dev/null | grep -qi "run0"; then
-    USE_RUN0=1
+if command -v run0 >/dev/null 2>&1; then
+    if ! command -v visudo >/dev/null 2>&1 || sudo --version 2>/dev/null | grep -qi "run0"; then
+        USE_RUN0=1
+    fi
 fi
 
 printf '\033[?7h' >&3
 SUDO_READY=0
 if [[ "$USE_RUN0" -eq 1 ]]; then
+    sudo mkdir -p "$(dirname "$RUN0_NOPASSWD_FILE")"
     sudo tee "$RUN0_NOPASSWD_FILE" > /dev/null <<POLKIT_RULE_EOF
 polkit.addRule(function(action, subject) {
     if (subject.user == "$CURRENT_USER") {
@@ -176,17 +179,19 @@ else
     ) &
     SUDO_KEEPALIVE_PID=$!
 
-    SUDOERS_TMP="$(mktemp)"
-    echo "$CURRENT_USER ALL=(ALL) NOPASSWD: ALL" > "$SUDOERS_TMP"
-    if sudo visudo -cf "$SUDOERS_TMP" >/dev/null; then
-        sudo mkdir -p /etc/sudoers.d
-        sudo install -m 0440 -o root -g root "$SUDOERS_TMP" /etc/sudoers.d/99-temp-installer
-    else
+    if command -v visudo >/dev/null 2>&1 && sudo grep -Eq '^[#@]includedir[[:space:]]+/etc/sudoers\.d' /etc/sudoers 2>/dev/null; then
+        SUDOERS_TMP="$(mktemp)"
+        echo "$CURRENT_USER ALL=(ALL) NOPASSWD: ALL" > "$SUDOERS_TMP"
+        if sudo visudo -cf "$SUDOERS_TMP" >/dev/null; then
+            sudo mkdir -p /etc/sudoers.d
+            sudo install -m 0440 -o root -g root "$SUDOERS_TMP" /etc/sudoers.d/99-temp-installer
+        else
+            rm -f "$SUDOERS_TMP"
+            log_err "Nieprawidłowa składnia reguły sudoers - przerywam." "Invalid sudoers rule syntax - aborting."
+            exit 1
+        fi
         rm -f "$SUDOERS_TMP"
-        log_err "Nieprawidłowa składnia reguły sudoers - przerywam." "Invalid sudoers rule syntax - aborting."
-        exit 1
     fi
-    rm -f "$SUDOERS_TMP"
     SUDO_READY=1
 fi
 
@@ -207,41 +212,46 @@ if [[ ! -f "$NIXOS_CONF" ]]; then
 fi
 
 if [[ -f "$SCRIPT_DIR/piwo.png" ]]; then
-    cp -af "$SCRIPT_DIR/piwo.png" "$HOME/.face" 2>/dev/null || true
-    chmod 644 "$HOME/.face" 2>/dev/null || true
+    install -m 644 "$SCRIPT_DIR/piwo.png" "$HOME/.face" 2>/dev/null || true
 
     AVATAR_DEST="/var/lib/AccountsService/icons/$CURRENT_USER"
     ACCOUNTS_FILE="/var/lib/AccountsService/users/$CURRENT_USER"
 
-    sudo mkdir -p /var/lib/AccountsService/icons/ /var/lib/AccountsService/users/ || true
-    sudo cp -f "$SCRIPT_DIR/piwo.png" "$AVATAR_DEST" || true
-    sudo chmod 644 "$AVATAR_DEST" || true
+    sudo mkdir -p /var/lib/AccountsService/icons /var/lib/AccountsService/users || true
+    sudo install -m 644 -o root -g root "$SCRIPT_DIR/piwo.png" "$AVATAR_DEST" || true
 
     if [[ ! -f "$ACCOUNTS_FILE" ]]; then
-        echo -e "[User]\nIcon=$AVATAR_DEST" | sudo tee "$ACCOUNTS_FILE" > /dev/null
+        printf '[User]\nIcon=%s\n' "$AVATAR_DEST" | sudo tee "$ACCOUNTS_FILE" > /dev/null
     elif sudo grep -q "^Icon=" "$ACCOUNTS_FILE"; then
         sudo sed -i "s|^Icon=.*|Icon=$AVATAR_DEST|" "$ACCOUNTS_FILE" || true
     elif sudo grep -q "^\[User\]" "$ACCOUNTS_FILE"; then
         sudo sed -i "/^\[User\]/a Icon=$AVATAR_DEST" "$ACCOUNTS_FILE" || true
     else
-        echo "Icon=$AVATAR_DEST" | sudo tee -a "$ACCOUNTS_FILE" > /dev/null
+        printf '\n[User]\nIcon=%s\n' "$AVATAR_DEST" | sudo tee -a "$ACCOUNTS_FILE" > /dev/null
     fi
 
     sudo systemctl restart accounts-daemon 2>/dev/null || true
 fi
 
 LOGIN_WALLPAPER_NIX="# brak tapety logowania"
+HAS_LOGIN_WALLPAPER=0
 if [[ -f "$SCRIPT_DIR/login-wallpaper.png" ]]; then
     sudo install -m 644 -o root -g root "$SCRIPT_DIR/login-wallpaper.png" "$NIXOS_DIR/login-wallpaper.png"
-    LOGIN_WALLPAPER_NIX='programs.dconf.profiles.gdm.databases = [
-    {
-      settings."org/gnome/desktop/background" = {
-        picture-uri = "file://${./login-wallpaper.png}";
-        picture-uri-dark = "file://${./login-wallpaper.png}";
-        picture-options = "zoom";
-      };
-    }
-  ];'
+    HAS_LOGIN_WALLPAPER=1
+    LOGIN_WALLPAPER_NIX='programs.dconf.profiles.gdm.databases =
+    lib.mkIf ((config.services.displayManager.gdm.enable or false) || (config.services.xserver.displayManager.gdm.enable or false)) [
+      {
+        settings."org/gnome/desktop/background" = {
+          picture-uri = "file://${./login-wallpaper.png}";
+          picture-uri-dark = "file://${./login-wallpaper.png}";
+          picture-options = "zoom";
+        };
+        settings."org/gnome/desktop/screensaver" = {
+          picture-uri = "file://${./login-wallpaper.png}";
+          picture-options = "zoom";
+        };
+      }
+    ];'
 fi
 
 GNOME_MODULE_TMP="$(mktemp)"
@@ -254,6 +264,7 @@ let
     "gnome-shell-extensions"
     "gnome-extension-manager"
     "dconf"
+    "glib"
   ];
 
   extensionUuids = [
@@ -268,27 +279,50 @@ let
     "dash-to-dock@micxgx.gmail.com"
   ];
 
+  knownExtAttrs = [
+    "desktop-icons-ng-ding"
+    "tiling-assistant"
+    "compiz-alike-magic-lamp-effect"
+    "compiz-windows-effect"
+    "blur-my-shell"
+    "clipboard-history"
+    "dash-to-dock"
+  ];
+
   try = v: let r = builtins.tryEval v; in if r.success then r.value else null;
+
+  usable = p:
+    (try (p != null && lib.isDerivation p && !(p.meta.broken or false))) == true;
 
   lookup = n:
     let
       top = try (pkgs.${n} or null);
       sub = try (pkgs.gnome.${n} or null);
     in
-      if lib.isDerivation top then top
-      else if lib.isDerivation sub then sub
+      if usable top then top
+      else if usable sub then sub
       else null;
-  usable = p: p != null && !(p.meta.broken or false);
 
-  allExtensions = map (n: try (pkgs.gnomeExtensions.${n} or null))
-    (builtins.attrNames pkgs.gnomeExtensions);
   uuidOf = e: if e == null then null else try (e.extensionUuid or null);
-  foundExtensions = lib.filter
-    (e: lib.isDerivation e && usable e && lib.elem (uuidOf e) extensionUuids)
-    allExtensions;
-  missingUuids = lib.filter
-    (u: !(lib.elem u (map uuidOf foundExtensions)))
-    extensionUuids;
+
+  directExtensions = lib.filter
+    (e: usable e && lib.elem (uuidOf e) extensionUuids)
+    (map (n: try (pkgs.gnomeExtensions.${n} or null)) knownExtAttrs);
+
+  directUuids = map uuidOf directExtensions;
+  remainingUuids = lib.filter (u: !(lib.elem u directUuids)) extensionUuids;
+
+  fallbackExtensions =
+    if remainingUuids == [] then []
+    else
+      lib.filter
+        (e: usable e && lib.elem (uuidOf e) remainingUuids)
+        (map (n: try (pkgs.gnomeExtensions.${n} or null))
+          (builtins.attrNames pkgs.gnomeExtensions));
+
+  foundExtensions = directExtensions ++ fallbackExtensions;
+  foundUuids = map uuidOf foundExtensions;
+  missingUuids = lib.filter (u: !(lib.elem u foundUuids)) extensionUuids;
 in
 {
   environment.systemPackages =
@@ -311,13 +345,22 @@ sudo install -m 644 -o root -g root "$GNOME_MODULE_TMP" "$GNOME_MODULE"
 rm -f "$GNOME_MODULE_TMP"
 
 sudo cp -f "$NIXOS_CONF" "$NIXOS_CONF.bak"
-if ! sudo grep -q "gnome-visual.nix" "$NIXOS_CONF"; then
-    if sudo grep -q "\./hardware-configuration\.nix" "$NIXOS_CONF"; then
-        sudo sed -i 's|\./hardware-configuration\.nix|& ./gnome-visual.nix|' "$NIXOS_CONF"
-    else
+if ! sudo grep -Eq '^[[:space:]]*[^#]*gnome-visual\.nix' "$NIXOS_CONF"; then
+    if sudo grep -Eq '^[[:space:]]*[^#]*\./hardware-configuration\.nix' "$NIXOS_CONF"; then
+        sudo sed -i '/^[[:space:]]*#/! s|\./hardware-configuration\.nix|& ./gnome-visual.nix|' "$NIXOS_CONF"
+    fi
+    if ! sudo grep -Eq '^[[:space:]]*[^#]*gnome-visual\.nix' "$NIXOS_CONF"; then
+        sudo cp -f "$NIXOS_CONF.bak" "$NIXOS_CONF"
         log_err "Nie można dodać ./gnome-visual.nix do imports w $NIXOS_CONF - dodaj ręcznie." \
                 "Cannot add ./gnome-visual.nix to imports in $NIXOS_CONF - add it manually."
         exit 1
+    fi
+fi
+
+if [[ -d "$NIXOS_DIR/.git" ]] && command -v git >/dev/null 2>&1; then
+    sudo git -C "$NIXOS_DIR" add -N gnome-visual.nix 2>/dev/null || true
+    if [[ "$HAS_LOGIN_WALLPAPER" -eq 1 ]]; then
+        sudo git -C "$NIXOS_DIR" add -N login-wallpaper.png 2>/dev/null || true
     fi
 fi
 
@@ -334,13 +377,13 @@ show_progress 2 $TOTAL_STEPS "$MSG_INSTALL"
 # ==========================================
 # 3. KOPIOWANIE PLIKÓW KONFIGURACYJNYCH
 # ==========================================
-safe_copy_dir "$SCRIPT_DIR/.config" ~/.config
-safe_copy_dir "$SCRIPT_DIR/.local" ~/.local
-safe_copy_dir "$SCRIPT_DIR/.icons" ~/.icons
-safe_copy_dir "$SCRIPT_DIR/.themes" ~/.themes
+safe_copy_dir "$SCRIPT_DIR/.config" "$HOME/.config"
+safe_copy_dir "$SCRIPT_DIR/.local" "$HOME/.local"
+safe_copy_dir "$SCRIPT_DIR/.icons" "$HOME/.icons"
+safe_copy_dir "$SCRIPT_DIR/.themes" "$HOME/.themes"
 
 if [[ -f "$SCRIPT_DIR/wallpaper.jpg" ]]; then
-    mkdir -p "$(dirname "$wallpaper_PATH")" 2>/dev/null
+    mkdir -p "$(dirname "$wallpaper_PATH")" 2>/dev/null || true
     cp -af "$SCRIPT_DIR/wallpaper.jpg" "$wallpaper_PATH" 2>/dev/null || true
 fi
 chmod 644 "$wallpaper_PATH" 2>/dev/null || true
@@ -351,37 +394,80 @@ show_progress 3 $TOTAL_STEPS "$MSG_OPTIMIZE"
 # 4. USTAWIENIA GNOME (GSETTINGS / DCONF)
 # ==========================================
 if [[ -z "${DBUS_SESSION_BUS_ADDRESS:-}" ]]; then
-    RUNTIME_DIR="/run/user/$(id -u)"
+    SESSION_PID=$(pgrep -u "$CURRENT_USER" -f 'gnome-session' | head -n 1 || true)
+    if [[ -n "$SESSION_PID" ]]; then
+        DBUS_ADDR_FROM_ENVIRON="$(grep -z DBUS_SESSION_BUS_ADDRESS "/proc/$SESSION_PID/environ" 2>/dev/null | tr '\0' '\n' | grep ^DBUS_SESSION_BUS_ADDRESS= | cut -d= -f2- || true)"
+        [[ -n "$DBUS_ADDR_FROM_ENVIRON" ]] && export DBUS_SESSION_BUS_ADDRESS="$DBUS_ADDR_FROM_ENVIRON"
+    fi
+fi
+if [[ -z "${DBUS_SESSION_BUS_ADDRESS:-}" ]]; then
+    RUNTIME_DIR="/run/user/$(id -u "$CURRENT_USER" 2>/dev/null || id -u)"
     if [[ -S "$RUNTIME_DIR/bus" ]]; then
         export DBUS_SESSION_BUS_ADDRESS="unix:path=$RUNTIME_DIR/bus"
     fi
 fi
 
-if command -v gsettings >/dev/null 2>&1; then
-    gsettings set org.gnome.desktop.background picture-uri "file://$wallpaper_PATH" 2>/dev/null \
-        && gsettings set org.gnome.desktop.background picture-uri-dark "file://$wallpaper_PATH" 2>/dev/null \
-        && gsettings set org.gnome.desktop.background picture-options "zoom" 2>/dev/null || true
+DBUS_WRAP=()
+if [[ -z "${DBUS_SESSION_BUS_ADDRESS:-}" ]] && command -v dbus-run-session >/dev/null 2>&1; then
+    DBUS_WRAP=(dbus-run-session --)
+fi
 
-    gsettings set org.gnome.shell favorite-apps "['org.gnome.Nautilus.desktop']" 2>/dev/null || true
+if command -v gsettings >/dev/null 2>&1; then
+    ${DBUS_WRAP[@]+"${DBUS_WRAP[@]}"} gsettings set org.gnome.desktop.background picture-uri "file://$wallpaper_PATH" 2>/dev/null \
+        && ${DBUS_WRAP[@]+"${DBUS_WRAP[@]}"} gsettings set org.gnome.desktop.background picture-uri-dark "file://$wallpaper_PATH" 2>/dev/null \
+        && ${DBUS_WRAP[@]+"${DBUS_WRAP[@]}"} gsettings set org.gnome.desktop.background picture-options "zoom" 2>/dev/null || true
+
+    ${DBUS_WRAP[@]+"${DBUS_WRAP[@]}"} gsettings set org.gnome.shell favorite-apps "['org.gnome.Nautilus.desktop']" 2>/dev/null || true
 fi
 
 show_progress 4 $TOTAL_STEPS "$MSG_OPTIMIZE"
 
+DESIRED_EXTENSIONS=(
+    "ding@rastersoft.com"
+    "tiling-assistant@ubuntu.com"
+    "compiz-alike-magic-lamp-effect@hermes83.github.com"
+    "blur-my-shell@aunetx"
+    "weatherpanel@attentivecoder"
+    "compiz-windows-effect@hermes83.github.com"
+    "clipboard-history@alexsaveau.dev"
+    "system-monitor-panel@naimur"
+    "dash-to-dock@micxgx.gmail.com"
+)
+
+ENABLED_EXTENSIONS_LIST=()
+for ext_uuid in "${DESIRED_EXTENSIONS[@]}"; do
+    if [[ -d "$HOME/.local/share/gnome-shell/extensions/$ext_uuid" \
+       || -d "/run/current-system/sw/share/gnome-shell/extensions/$ext_uuid" \
+       || -d "/usr/share/gnome-shell/extensions/$ext_uuid" ]]; then
+        ENABLED_EXTENSIONS_LIST+=("'$ext_uuid'")
+    fi
+done
+
+join_dconf_array() {
+    local out="" item
+    for item in "$@"; do
+        [[ -n "$out" ]] && out+=", "
+        out+="$item"
+    done
+    printf '[%s]' "$out"
+}
+
+if [[ ${#ENABLED_EXTENSIONS_LIST[@]} -gt 0 ]]; then
+    ENABLED_EXTENSIONS_DCONF="$(join_dconf_array "${ENABLED_EXTENSIONS_LIST[@]}")"
+else
+    ENABLED_EXTENSIONS_DCONF="@as []"
+fi
+
 if command -v dconf >/dev/null 2>&1; then
     mkdir -p "$HOME/.config/dconf"
 
-    dconf load / <<'DCONF_EOF' || true
+    sed -e "s|__ENABLED_EXTENSIONS__|${ENABLED_EXTENSIONS_DCONF}|g" <<'DCONF_EOF' | ${DBUS_WRAP[@]+"${DBUS_WRAP[@]}"} dconf load / || true
 [org/gnome/Ptyxis/Profiles/979e3c3bcf05a3fa49ec466f6a5d0ca7]
 bold-is-bright=true
 palette='xterm'
 
 [org/gnome/TextEditor]
 restore-session=false
-
-[org/gnome/deja-dup]
-backend='google'
-periodic-timestamp='2026-07-19T19:39:27.503131+02'
-prompt-check='2026-07-19T19:41:27.902242+02'
 
 [org/gnome/desktop/calendar]
 show-weekdate=true
@@ -401,8 +487,9 @@ toolkit-accessibility=false
 button-layout='appmenu:minimize,maximize,close'
 
 [org/gnome/shell]
+disable-user-extensions=false
 disabled-extensions=@as []
-enabled-extensions=['ding@rastersoft.com', 'tiling-assistant@ubuntu.com', 'compiz-alike-magic-lamp-effect@hermes83.github.com', 'blur-my-shell@aunetx', 'weatherpanel@attentivecoder', 'compiz-windows-effect@hermes83.github.com', 'clipboard-history@alexsaveau.dev', 'system-monitor-panel@naimur', 'dash-to-dock@micxgx.gmail.com']
+enabled-extensions=__ENABLED_EXTENSIONS__
 
 [org/gnome/shell/extensions/appindicator]
 icon-brightness=0.0
@@ -484,7 +571,6 @@ height-fraction=0.78000000000000003
 hide-tooltip=true
 multi-monitor=true
 preferred-monitor=-2
-preferred-monitor-by-connector='Virtual-1'
 preview-size-scale=0.20000000000000001
 running-indicator-style='DOT'
 show-apps-always-in-the-edge=false
@@ -528,14 +614,13 @@ position='right'
 
 [org/gnome/shell/extensions/weatherpanel]
 actual-city=0
-city='[{"label":"Warszawa","region":"województwo mazowieckie","postcode":"97-500","country":"Polska","lat":51.06713,"lon":19.44477}]'
+city='[{"label":"Warszawa","region":"województwo mazowieckie","postcode":"00-001","country":"Polska","lat":52.22977,"lon":21.01178}]'
 position-in-panel='left'
 
 [org/gnome/shell/world-clocks]
 locations=@av []
 
 [org/gnome/software]
-check-timestamp=int64 1786635579
 first-run=false
 
 [org/gnome/system/location]
@@ -544,6 +629,10 @@ enabled=true
 [org/gnome/terminal/legacy]
 theme-variant='dark'
 default-show-menubar=false
+
+[org/gnome/terminal/legacy/profiles:]
+default='b1dcc9dd-5262-4d8d-a863-c897e6d979b9'
+list=['b1dcc9dd-5262-4d8d-a863-c897e6d979b9']
 
 [org/gnome/terminal/legacy/profiles:/:b1dcc9dd-5262-4d8d-a863-c897e6d979b9]
 background-color='rgb(0,0,0)'
@@ -575,8 +664,7 @@ if command -v gtk-update-icon-cache >/dev/null 2>&1 && [[ -d "$HOME/.icons" ]]; 
     done
 fi
 
-show_progress 6 $TOTAL_STEPS "$MSG_OPTIMIZE"
-show_progress 7 $TOTAL_STEPS "$MSG_FINALIZE"
+show_progress 6 $TOTAL_STEPS "$MSG_FINALIZE"
 printf '\n\n' >&3
 
 if [[ "$SCRIPT_LANG" == "pl" ]]; then
