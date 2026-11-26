@@ -212,15 +212,13 @@ if [[ ! -f "$NIXOS_CONF" ]]; then
 fi
 
 if [[ -f "$SCRIPT_DIR/piwo.png" ]]; then
-    install -m 644 "$SCRIPT_DIR/piwo.png" "$HOME/.face" 2>/dev/null || true
-
     AVATAR_DEST="/var/lib/AccountsService/icons/$CURRENT_USER"
     ACCOUNTS_FILE="/var/lib/AccountsService/users/$CURRENT_USER"
 
     sudo mkdir -p /var/lib/AccountsService/icons /var/lib/AccountsService/users || true
     sudo install -m 644 -o root -g root "$SCRIPT_DIR/piwo.png" "$AVATAR_DEST" || true
 
-    if [[ ! -f "$ACCOUNTS_FILE" ]]; then
+    if ! sudo test -f "$ACCOUNTS_FILE"; then
         printf '[User]\nIcon=%s\n' "$AVATAR_DEST" | sudo tee "$ACCOUNTS_FILE" > /dev/null
     elif sudo grep -q "^Icon=" "$ACCOUNTS_FILE"; then
         sudo sed -i "s|^Icon=.*|Icon=$AVATAR_DEST|" "$ACCOUNTS_FILE" || true
